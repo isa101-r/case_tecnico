@@ -1,0 +1,186 @@
+---
+title: "Precos_cobre"
+output:
+  word_document: default
+  html_document: default
+date: "2026-02-20"
+---
+1) Pacotes
+```{r atualizardados, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r instalapcts, include=FALSE}
+library(readxl)
+library(stringr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+```
+2) Juntando os dados das planilhas e formatando data e preço
+```{r juntadados, message=FALSE, warning=FALSE}
+# Caminho da pasta
+caminho <- "C:/Users/cassi/Downloads/lme_prices (1)/"
+arquivos <- list.files(
+  path = caminho,
+  pattern = "\\.xlsx$",
+  full.names = TRUE
+)
+dados <- map_dfr(arquivos, function(arq) {
+  
+  df <- read_excel(arq, skip = 6, col_names = FALSE)
+  
+  df <- df[-c(1,2), ]
+  
+  df <- df[, c(1,4)]
+  colnames(df) <- c("data", "preco_cash_mean")
+
+  df$data <- as.Date(as.numeric(df$data), origin = "1899-12-30")
+  
+  df$preco_cash_mean <- as.numeric(
+    gsub("[\\$,]", "", df$preco_cash_mean)
+  )
+  
+  # Informações do arquivo
+  df$arquivo <- basename(arq)
+  df$mes <- str_extract(df$arquivo, "^[A-Za-z]+")
+  df$ano <- str_extract(df$arquivo, "\\d{4}")
+  
+  df
+})
+print(head(dados))
+glimpse(dados)
+```
+3) Análise dos dados
+1. Quando o cobre atingiu sua menor cotação?
+```{r menorvalorcobre, message=FALSE, warning=FALSE}
+min(dados$preco_cash_mean, na.rm = TRUE)
+dados %>%
+  filter(preco_cash_mean == min(preco_cash_mean, na.rm = TRUE)) 
+```
+```{r graficomenorvalor, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+ggplot(dados, aes(x = data, y = preco_cash_mean)) +
+  geom_line() +
+  geom_point(
+    data = dados %>% slice_min(preco_cash_mean),
+    size = 3
+  ) +
+  theme_minimal()
+```
+2. Quando o cobre atingiu sua maior cotação?
+```{r maiorcotacao, message=FALSE, warning=FALSE}
+max(dados$preco_cash_mean, na.rm = TRUE)
+dados %>%
+  filter(preco_cash_mean == max(preco_cash_mean, na.rm = TRUE)) 
+```
+```{r graficomaiorvalor, message=FALSE, warning=FALSE}
+ggplot(dados, aes(x = data, y = preco_cash_mean)) +
+  geom_line() +
+  geom_point(
+    data = dados %>% slice_max(preco_cash_mean),
+    size = 3
+  ) +
+  theme_minimal()
+```
+
+3. Qual foi a variação média mensal de 2020? E a de 2024?
+```{r mediamensal, message=FALSE, warning=FALSE}
+library(dplyr)
+library(lubridate)
+
+# média mensal
+mensal <- dados %>%
+  mutate(
+    ano = year(data),
+    mes = month(data)
+  ) %>%
+  group_by(ano, mes) %>%
+  summarise(preco_medio = mean(preco_cash_mean, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(ano, mes) %>%
+  mutate(
+    variacao_mensal = (preco_medio / lag(preco_medio) - 1) * 100
+  )
+```
+
+```{r variacaomediamensal, message=FALSE, warning=FALSE}
+mensal %>%
+  filter(ano == 2020) %>%
+  summarise(media_var_2020 = mean(variacao_mensal, na.rm = TRUE))
+
+mensal %>%
+  filter(ano == 2024) %>%
+  summarise(media_var_2024 = mean(variacao_mensal, na.rm = TRUE))
+```
+
+4. Qual foi a variação acumulada entre 02/01/2020 e 31/12/2025?
+```{r variacaoacum, message=FALSE, warning=FALSE}
+periodo <- dados %>%
+  filter(data >= as.Date("2020-01-02"),
+         data <= as.Date("2025-12-31")) %>%
+  arrange(data)
+
+variacao_acumulada <- 
+  (last(periodo$preco_cash_mean) /
+     first(periodo$preco_cash_mean) - 1) * 100
+
+variacao_acumulada
+```
+
+5. Produza um gráfico com a média mensal dos preços no período analisado.
+```{r grafmediamensal, message=FALSE, warning=FALSE}
+ggplot(mensal, aes(x = as.Date(paste(ano, mes, "01", sep = "-")),
+                   y = preco_medio)) +
+  geom_line() +
+  labs(title = "Preço Médio Mensal do Cobre",
+       x = "Ano",
+       y = "Preço Médio (USD)") +
+  theme_minimal()
+```
+
+6. Produza um gráfico com frequência trimestral das cotações no último dia de cada trimestre.
+```{r freqtrimestral, message=FALSE, warning=FALSE}
+trimestral <- dados %>%
+  mutate(
+    ano = year(data),
+    trimestre = quarter(data)
+  ) %>%
+  group_by(ano, trimestre) %>%
+  filter(data == max(data)) %>%
+  ungroup()
+
+ggplot(trimestral, aes(x = data, y = preco_cash_mean)) +
+  geom_line() +
+  labs(title = "Cotação no Último Dia de Cada Trimestre",
+       x = "Data",
+       y = "Preço (USD)") +
+  theme_minimal()
+```
+
+7. Produza um gráfico de variação anual para todo o período analisado.
+```{r variacaoanual, message=FALSE, warning=FALSE}
+anual <- dados %>%
+  mutate(ano = year(data)) %>%
+  group_by(ano) %>%
+  summarise(preco_medio = mean(preco_cash_mean, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(ano) %>%
+  mutate(
+    variacao_anual = (preco_medio / lag(preco_medio) - 1) * 100
+  )
+
+ggplot(anual, aes(x = ano, y = variacao_anual)) +
+  geom_col() +
+  labs(title = "Variação Anual do Preço do Cobre (%)",
+       x = "Ano",
+       y = "Variação (%)") +
+  theme_minimal()
+```
+8. Produza uma análise sintética sobre os determinantes da trajetória observada nos preços do cobre.
+  A trajetória dos preços do cobre entre 2020 e 2025 pode ser explicada principalmente por três fatores: o ciclo da economia global, as condições financeiras internacionais e a dinâmica de oferta e demanda do próprio mercado de cobre.
+  No início de 2020, a pandemia provocou forte queda da atividade econômica mundial, o que reduziu temporariamente a demanda por metais industriais. Como o cobre é muito utilizado em construção, infraestrutura e indústria, seus preços caíram inicialmente. No entanto, a rápida implementação de estímulos fiscais e monetários nas principais economias, especialmente nos Estados Unidos e na China, impulsionou a recuperação da atividade e elevou novamente os preços ainda no segundo semestre de 2020.
+  Em 2021 e início de 2022, os preços continuaram subindo, sustentados pela reabertura das economias, pelo aumento da liquidez global e por expectativas positivas em relação a investimentos em infraestrutura e transição energética. O cobre passou a ser visto como um insumo estratégico para a eletrificação da economia, o que reforçou sua demanda. Além disso, a oferta não cresceu na mesma velocidade, contribuindo para manter os preços elevados.
+  A partir do segundo trimestre de 2022, observa-se uma reversão da tendência de alta. Esse movimento coincide com o início do ciclo de aumento de juros nas economias avançadas, principalmente nos Estados Unidos. O aperto monetário fortaleceu o dólar, reduziu a liquidez internacional e aumentou as expectativas de desaceleração econômica, fatores que pressionaram os preços das commodities. A desaceleração do setor imobiliário chinês também contribuiu para reduzir a demanda por cobre nesse período.
+  Nos últimos anos, os preços apresentaram volatilidade, mas permaneceram em níveis relativamente elevados. Isso sugere que, apesar da influência do ciclo econômico e das condições financeiras, existe um componente estrutural de demanda associado à transição energética e à eletrificação, que tende a sustentar o mercado no médio prazo.
