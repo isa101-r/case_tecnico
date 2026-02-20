@@ -20,7 +20,7 @@ library(lubridate)
 2) Juntando os dados das planilhas e formatando data e preço
 ```{r juntadados, message=FALSE, warning=FALSE}
 # Caminho da pasta
-caminho <- "C:/Users/cassi/Downloads/lme_prices (1)/"
+caminho <- "./lme_prices (1)/"
 arquivos <- list.files(
   path = caminho,
   pattern = "\\.xlsx$",
@@ -183,4 +183,5 @@ ggplot(anual, aes(x = ano, y = variacao_anual)) +
   No início de 2020, a pandemia provocou forte queda da atividade econômica mundial, o que reduziu temporariamente a demanda por metais industriais. Como o cobre é muito utilizado em construção, infraestrutura e indústria, seus preços caíram inicialmente. No entanto, a rápida implementação de estímulos fiscais e monetários nas principais economias, especialmente nos Estados Unidos e na China, impulsionou a recuperação da atividade e elevou novamente os preços ainda no segundo semestre de 2020.
   Em 2021 e início de 2022, os preços continuaram subindo, sustentados pela reabertura das economias, pelo aumento da liquidez global e por expectativas positivas em relação a investimentos em infraestrutura e transição energética. O cobre passou a ser visto como um insumo estratégico para a eletrificação da economia, o que reforçou sua demanda. Além disso, a oferta não cresceu na mesma velocidade, contribuindo para manter os preços elevados.
   A partir do segundo trimestre de 2022, observa-se uma reversão da tendência de alta. Esse movimento coincide com o início do ciclo de aumento de juros nas economias avançadas, principalmente nos Estados Unidos. O aperto monetário fortaleceu o dólar, reduziu a liquidez internacional e aumentou as expectativas de desaceleração econômica, fatores que pressionaram os preços das commodities. A desaceleração do setor imobiliário chinês também contribuiu para reduzir a demanda por cobre nesse período.
+
   Nos últimos anos, os preços apresentaram volatilidade, mas permaneceram em níveis relativamente elevados. Isso sugere que, apesar da influência do ciclo econômico e das condições financeiras, existe um componente estrutural de demanda associado à transição energética e à eletrificação, que tende a sustentar o mercado no médio prazo.
